@@ -1,0 +1,61 @@
+[delayed_gcode chamber_temp_control]
+initial_duration: 0
+gcode:
+    {% set heated_bed_on = printer["heater_bed"].target > 0 %}
+    {% if heated_bed_on %}
+        {% set current_temp = printer["temperature_sensor chamber"].temperature %}
+        {% set target_temp = printer['gcode_macro CHAMBER_TEMP'].target_temp %}
+        {% set fan_speed = printer['gcode_macro CHAMBER_TEMP'].fan_speed %}
+        {% if target_temp == 0 %}
+            SET_FAN_SPEED FAN=chamber_fan1 SPEED=0
+            SET_FAN_SPEED FAN=chamber_fan2 SPEED=0
+        {% else %}
+            {% set delta_temp = current_temp - target_temp %}
+            {% if delta_temp > 5 %}
+                #RESPOND PREFIX="debug" MSG="Delta temp: { delta_temp }, Setting fan speed to 0"
+                SET_FAN_SPEED FAN=chamber_fan1 SPEED=0
+                SET_FAN_SPEED FAN=chamber_fan2 SPEED=0
+                SET_GCODE_VARIABLE MACRO=CHAMBER_TEMP VARIABLE=fan_speed VALUE=0
+                #RESPOND PREFIX="debug" MSG="Fan speed set to: { printer['gcode_macro CHAMBER_TEMP'].fan_speed }"
+                UPDATE_DELAYED_GCODE ID=chamber_temp_control DURATION=60
+            {% elif delta_temp >= 0 and delta_temp <= 5 %}
+                #RESPOND PREFIX="debug" MSG="Delta temp: { delta_temp }, Setting fan speed to 0.25"
+                SET_FAN_SPEED FAN=chamber_fan1 SPEED=0.25
+                SET_FAN_SPEED FAN=chamber_fan2 SPEED=0.25
+                SET_GCODE_VARIABLE MACRO=CHAMBER_TEMP VARIABLE=fan_speed VALUE=0.25
+                #RESPOND PREFIX="debug" MSG="Fan speed set to: { printer['gcode_macro CHAMBER_TEMP'].fan_speed }"
+                UPDATE_DELAYED_GCODE ID=chamber_temp_control DURATION=60
+            {% elif delta_temp <= -1 %}
+                #RESPOND PREFIX="debug" MSG="Delta temp: { delta_temp }, Setting fan speed to 1.0"
+                SET_FAN_SPEED FAN=chamber_fan1 SPEED=1.0
+                SET_FAN_SPEED FAN=chamber_fan2 SPEED=1.0
+                SET_GCODE_VARIABLE MACRO=CHAMBER_TEMP VARIABLE=fan_speed VALUE=1.0
+                #RESPOND PREFIX="debug" MSG="Fan speed set to: { printer['gcode_macro CHAMBER_TEMP'].fan_speed }"
+                UPDATE_DELAYED_GCODE ID=chamber_temp_control DURATION=60
+            {% endif %}
+        {% endif %}
+#    {% set heated_bed_on = printer["heater_bed"].target > 0 %}
+#     {% if heated_bed_on %}
+#         {% set current_temp = printer["temperature_sensor chamber"].temperature %}
+#         {% set target_temp = printer['gcode_macro CHAMBER_TEMP'].target_temp %}
+#         {% set fan_speed = printer['gcode_macro CHAMBER_TEMP'].fan_speed %}
+#         {% if target_temp == 0 %}
+#             SET_FAN_SPEED FAN=chamber_fan1 SPEED=0
+#             SET_FAN_SPEED FAN=chamber_fan2 SPEED=0
+#         {% elif current_temp > target_temp + 5 %}
+#             SET_FAN_SPEED FAN=chamber_fan1 SPEED=0
+#             SET_FAN_SPEED FAN=chamber_fan2 SPEED=0
+#         {% if current_temp >= target_temp and current_temp < target_temp + 5 %}
+#             SET_FAN_SPEED FAN=chamber_fan1 SPEED=0.25
+#             SET_FAN_SPEED FAN=chamber_fan2 SPEED=0.25   
+#         {% elif current_temp < target_temp - 5 %}
+#             SET_FAN_SPEED FAN=chamber_fan1 SPEED=1.0
+#             SET_FAN_SPEED FAN=chamber_fan2 SPEED=1.0
+#             SET_GCODE_VARIABLE MACRO=CHAMBER_TEMP VARIABLE=fan_speed VALUE=1.0
+#             UPDATE_DELAYED_GCODE ID=chamber_temp_control DURATION=60      
+#         {% endif %}
+     {% else %}
+        RESPOND PREFIX="info" MSG="Heated bed not on, exiting"
+        SET_FAN_SPEED FAN=chamber_fan1 SPEED=0
+        SET_FAN_SPEED FAN=chamber_fan2 SPEED=0
+    {% endif %}
